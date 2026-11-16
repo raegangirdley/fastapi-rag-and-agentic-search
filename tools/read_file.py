@@ -8,14 +8,10 @@ MAX_CHARS = 8000
 def read_file(path: str, start_line: int = 1, end_line: int = 200) -> str:
     """Read lines start_line to end_line of one markdown file,
     with line numbers."""
-    if Path(path).is_absolute():
-        raise ValueError(f"absolute path not allowed: {path}")
     p = safe_path(path)
-    if p.suffix != ".md":
-        raise ValueError(f"not a markdown file: {path}")
     if not p.exists():
         raise FileNotFoundError(path)
-    if not p.is_file():
+    if not p.is_file() or p.suffix != ".md":
         raise ValueError(f"not a markdown file: {path}")
 
     start = max(1, start_line)
