@@ -1,28 +1,15 @@
-import ollama
+from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel
+from agent import answer_question
 
 EMBEDDING_MODEL = "nomic-embed-text"
-LANGUAGE_MODEL = "llama3.1:8b"
 
-def embed_text(text: str) -> list[float]:
-    response = ollama.embed(model=EMBEDDING_MODEL, input=text)
-    return response["embeddings"][0]
+app = FastAPI()
 
-def call_model(messages, tools):
-    response = ollama.chat(
-        model=LANGUAGE_MODEL,
-        messages=messages,
-        tools=tools
-    )
-    return response
+class QuestionRequest(BaseModel):
+    question: str
 
-response = call_model(
-    messages=[
-        {
-            'role': 'user',
-            'content': 'Explain how an API works in two short sentences.',
-        },
-    ],
-    tools=[]
-)
-
-print(response['message']['content'])
+@app.post("/ask", response_class=PlainTextResponse)
+def ask(request: QuestionRequest) -> str:
+    return answer_question(request.question)
