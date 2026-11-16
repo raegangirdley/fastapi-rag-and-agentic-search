@@ -1,0 +1,45 @@
+[
+    {
+        "type": "function",
+        "function": {
+            "name": "grep",
+            "description": "Search markdown files for lines containing every space-separated term, case-insensitively and in any order. Use a few keywords, not a full question. Returns file, line, and matching text.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pattern": {"type": "string", "description": "A few space-separated keywords. Every term must appear on tyhe same line; use terms without punctuation."},
+                    "folder": {"type": "string", "description": "Corpus folder to search", "enum": ["corpus"]}
+                },
+                "required": ["pattern", "folder"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_files",
+            "description": "List all markdown files in corpus folder.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "folder": {"type": "string", "description": "Corpus folder to list files from", "enum": ["corpus"]}
+                },
+                "required": ["folder"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_file",
+            "description": "Read a markdown file from corpus folder. Path must be corpus-relative file path copied from grep/list_files results; not a URL. Path must include corpus/ prefix and match a path returned by grep or list_files.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to the markdown file to read. Copy complete path from grep/list_files, including corpus/ and subfolders. Never pass just filename. Correct example: corpus/advanced/advanced-dependencies.md"}
+                },
+                "required": ["path"]
+            }
+        }
+    }
+]
