@@ -58,7 +58,7 @@ Requirements: Python 3.12, [Ollama](https://ollama.com)
 git clone [TODO: repo url]
 cd fastapi-rag-and-agentic-search
 python -m venv .venv
-.venv\Scripts\activate        # Windows
+.venv\Scripts\activate
 pip install -r requirements.txt
 
 ollama pull llama3.1:8b

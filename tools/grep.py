@@ -8,8 +8,6 @@ def grep(pattern: str, folder: str = "corpus") -> str:
     Returns 'file:line: text' for each match, up to MAX_RESULTS matches."""
     needle = pattern.lower()
     matches = []
-    files = list_files(folder)
-    results = []
     for file in list_files(folder):
         with open(file, "r", encoding="utf-8", errors="replace") as f:
             for line_number, line in enumerate(f, start=1):
