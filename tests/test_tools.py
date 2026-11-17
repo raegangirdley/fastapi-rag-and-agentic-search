@@ -72,7 +72,6 @@ def test_grep_caps_at_50(tmp_path, monkeypatch):
         (tmp_path / f"file_{i}.md").write_text(f"Line {i}\n")
     result = grep("Line", str(tmp_path))
     lines = result.splitlines()
-
     assert len(lines) == 51
     assert lines[-1] == "[stopped at 50 matches; narrow your search]"
 
@@ -92,4 +91,5 @@ def test_grep_no_matches(tmp_path, monkeypatch):
     monkeypatch.setattr("tools.safe_path.CORPUS_ROOT", tmp_path.resolve())
     (tmp_path / "file.md").write_text("Hello World\n")
     result = grep("nonexistent", str(tmp_path))
-    assert result == "No matches found."
+    assert result.startswith("No matches found.")
+    assert "distinctive keywords" in result

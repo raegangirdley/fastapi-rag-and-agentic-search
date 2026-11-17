@@ -29,7 +29,12 @@ for q in evals:
             text += p.read_text(encoding="utf-8", errors="replace").lower()
 
     for term in q.get("must_include", []):
-        if text and term.lower() not in text:
+        alternatives = [
+            option.strip().lower()
+            for option in term.split("|")
+            if option.strip()
+        ]
+        if text and not any(option in text for option in alternatives):
             print(f"[{qid}] '{term}' not found in expected sources "
                   f"(it may only appear in the answer wording)")
 

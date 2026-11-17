@@ -1,6 +1,7 @@
 from pathlib import Path
-
+import difflib
 from tools.safe_path import safe_path
+from tools.list_files import list_files
 
 MAX_LINES = 200
 MAX_CHARS = 8000
@@ -10,7 +11,17 @@ def read_file(path: str, start_line: int = 1, end_line: int = 200) -> str:
     with line numbers."""
     p = safe_path(path)
     if not p.exists():
-        raise FileNotFoundError(path)
+        msg = f"no such file: {path}."
+        try:
+            candidates = list_files("corpus")
+            name = Path(path).name
+            hints = [c for c in candidates if Path(c).name == name] \
+                or difflib.get_close_matches(path, candidates, n=3, cutoff=0.4)
+        except Exception:
+            hints = []
+        msg += (" Did you mean: " + ", ".join(hints) + "?") if hints else \
+            " Use grep or list_files to find the exact path."
+        raise FileNotFoundError(msg)
     if not p.is_file() or p.suffix != ".md":
         raise ValueError(f"not a markdown file: {path}")
 
