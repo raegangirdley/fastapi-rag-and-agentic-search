@@ -5,6 +5,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from agent import CITATION, LANGUAGE_MODEL, call_model, run_agent
+from rag import run_rag
 
 ABSTAIN = ("does not", "doesn't", "not specified", "no mention", "not documented",
            "not provide", "not contain", "cannot find", "can't find", "no built-in",
@@ -27,8 +28,7 @@ def run_no_retrieval(question: str, question_id: str = "adhoc") -> dict:
         "completion_tokens": getattr(response, "eval_count", 0) or 0,
     }
 
-SYSTEMS = {"agent": run_agent, "no_retrieval": run_no_retrieval}
-# TODO: SYSTEMS["rag"] = run_rag
+SYSTEMS = {"agent": run_agent, "no_retrieval": run_no_retrieval, "rag": run_rag}
 
 def includes_all(answer: str, terms: list[str]) -> bool:
     # each term must appear
@@ -41,6 +41,7 @@ def score(q: dict, result: dict) -> dict:
         return {
             "correct": None,
             "source_recall": None,
+            "retrieval_recall": None,
             "needs_review": True,
             "grounded": None,
         }
@@ -61,11 +62,19 @@ def score(q: dict, result: dict) -> dict:
     terms = q.get("must_include")
     correct = includes_all(answer, terms) if terms else None
     recall = len(expected & cited) / len(expected) if expected else None
+    retrieved_files = result.get("retrieved_files")
+    retrieval_recall = (
+        len(expected & set(retrieved_files)) / len(expected)
+        if expected and retrieved_files is not None
+        else None
+    )
+
     return {
         "correct": correct, 
         "source_recall": recall, 
         "needs_review": False,
-        "grounded": bool(correct) and recall == 1.0 and not result["unverified"]
+        "grounded": bool(correct) and recall == 1.0 and not result["unverified"],
+        "retrieval_recall": retrieval_recall
         }
 
 def mean(values):

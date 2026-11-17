@@ -127,9 +127,9 @@ def repair_citations(answer: str, tool_texts: list[str]) -> str:
     return "".join(out)
 
 # returns list of problems w/ answer; empty means grounded
-def check_answer(answer, tool_texts, tools_used) -> list[str]:
+def check_answer(answer, tool_texts, tools_used, require_read: bool = True) -> list[str]:
     problems = []
-    if "read_file" not in tools_used:
+    if require_read and "read_file" not in tools_used:
         problems.append("you never opened a file with read_file")
 
     # answer won't paste file contents

@@ -5,6 +5,9 @@ from pathlib import Path
 
 from agent import CITATION
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+
 results_path = Path(sys.argv[1])
 evals = {str(q["id"]): q
          for q in json.loads(Path("evals.json").read_text(encoding="utf-8"))}

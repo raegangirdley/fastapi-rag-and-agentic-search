@@ -3,8 +3,6 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from agent import answer_question
 
-EMBEDDING_MODEL = "nomic-embed-text"
-
 app = FastAPI()
 
 class QuestionRequest(BaseModel):
