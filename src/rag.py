@@ -8,9 +8,9 @@ from pathlib import Path
 import numpy as np
 import ollama
 
-from agent import MAX_RETRIES, call_model, check_answer, repair_citations
-from audit import log_event
-from tools.list_files import list_files
+from src.agent import MAX_RETRIES, call_model, check_answer, repair_citations
+from src.audit import log_event
+from src.tools.list_files import list_files
 
 EMBEDDING_MODEL = "nomic-embed-text"
 INDEX_DIR = Path("index")

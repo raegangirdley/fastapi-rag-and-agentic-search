@@ -3,14 +3,16 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from agent import CITATION
+from src.agent import CITATION
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
 results_path = Path(sys.argv[1])
 evals = {str(q["id"]): q
-         for q in json.loads(Path("evals.json").read_text(encoding="utf-8"))}
+         for q in json.loads(
+             Path(__file__).with_name("evals.json").read_text(encoding="utf-8")
+         )}
 grades_path = results_path.with_suffix(".grades.jsonl")
 
 done = set()

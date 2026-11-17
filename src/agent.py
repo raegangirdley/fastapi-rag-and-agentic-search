@@ -5,10 +5,10 @@ import time
 import uuid
 
 from pathlib import Path
-from tools.grep import grep
-from tools.list_files import list_files
-from tools.read_file import read_file
-from audit import log_event
+from src.tools.grep import grep
+from src.tools.list_files import list_files
+from src.tools.read_file import read_file
+from src.audit import log_event
 
 tools_path = Path(__file__).resolve().parent / "tools" / "tools.json"
 with tools_path.open(encoding="utf-8") as file:

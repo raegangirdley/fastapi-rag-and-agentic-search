@@ -1,7 +1,7 @@
 from pathlib import Path
 import difflib
-from tools.safe_path import safe_path
-from tools.list_files import list_files
+from src.tools.safe_path import safe_path
+from src.tools.list_files import list_files
 
 MAX_LINES = 200
 MAX_CHARS = 8000

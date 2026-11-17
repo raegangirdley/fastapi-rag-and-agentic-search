@@ -7,7 +7,7 @@ From the repository root, with the Python 3.12 virtual environment from [Setup](
 ```powershell
 python -m pip install -r requirements.txt
 ollama pull llama3.1:8b; ollama pull nomic-embed-text
-python -m uvicorn main:app --reload
+python -m uvicorn src.main:app --reload
 ```
 
 ## Key findings (so far)
@@ -95,10 +95,10 @@ ollama pull nomic-embed-text
 
 ## Usage
 
-Start the API after Ollama is running and the model is available:
+Run these commands from the repository root. Start the API after Ollama is running and the model is available:
 
 ```bash
-python -m uvicorn main:app --reload
+python -m uvicorn src.main:app --reload
 ```
 
 Send a JSON `POST` request with a `question` field to `http://127.0.0.1:8000/ask`.
@@ -107,24 +107,24 @@ The HTTP endpoint currently uses agentic search; RAG is available through the ev
 Build the RAG index once, check retrieval, then run and grade RAG:
 
 ```bash
-python -c "from rag import load_index; chunks, vectors = load_index(); print('Chunk count:', len(chunks))"
-python retrieval_check.py
-python eval_runner.py --system rag --ids 1 2 3
-python eval_runner.py --system rag
-python grade.py results\rag-YYYYMMDD-HHMMSS.jsonl
+python -c "from src.rag import load_index; chunks, vectors = load_index(); print('Chunk count:', len(chunks))"
+python -m evals.retrieval_check
+python -m evals.eval_runner --system rag --ids 1 2 3
+python -m evals.eval_runner --system rag
+python -m evals.grade results\rag-YYYYMMDD-HHMMSS.jsonl
 ```
 
 Run and grade the agentic and no-retrieval evaluations:
 
 ```bash
-python validate_evals.py
-python eval_runner.py --ids 1 2 3
-python eval_runner.py
-python eval_runner.py --system no_retrieval
-python grade.py results\agent-YYYYMMDD-HHMMSS.jsonl
+python -m evals.validate_evals
+python -m evals.eval_runner --ids 1 2 3
+python -m evals.eval_runner
+python -m evals.eval_runner --system no_retrieval
+python -m evals.grade results\agent-YYYYMMDD-HHMMSS.jsonl
 ```
 
-Pass `grade.py` the exact results path printed by the runner. It records an answer grade (correct, partial, wrong) and a separate citation-support judgment. Infrastructure-error rows are skipped.
+Pass `evals.grade` the exact results path printed by the runner. It records an answer grade (correct, partial, wrong) and a separate citation-support judgment. Infrastructure-error rows are skipped. To recompute automatic scores for an existing run without changing it, use `python -m evals.rescore results\run.jsonl`; it writes a separate `-rescored.jsonl` file.
 
 ## Tests
 
@@ -132,11 +132,11 @@ Pass `grade.py` the exact results path printed by the runner. It records an answ
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Run tests with the project interpreter so a globally installed `pytest.exe` is not used by mistake. Tests cover safe file access, path traversal, search behavior and result caps, chunking and line numbers, and evaluator handling of infrastructure errors.
+Run tests with the project interpreter so a globally installed `pytest.exe` is not used by mistake. Tests cover safe file access, path traversal, search behavior and result caps, chunking and line numbers, evaluator handling of infrastructure errors, and rescoring.
 
 ## Evaluation
 
-`evals.json` contains 17 hand-written questions, each with an expected answer, key facts, and expected source files. Fourteen corpus-answer questions have `must_include` terms for automatic keyword scoring; three `not_in_docs` questions use phrase-based abstention scoring. The question types are:
+`evals/evals.json` contains 17 hand-written questions, each with an expected answer, key facts, and expected source files. Fourteen corpus-answer questions have `must_include` terms for automatic keyword scoring; three `not_in_docs` questions use phrase-based abstention scoring. The question types are:
 
 - single-file
 - multi-file

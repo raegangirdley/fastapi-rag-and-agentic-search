@@ -1,8 +1,10 @@
 import json
 from pathlib import Path
-from rag import retrieve
+from src.rag import retrieve
 
-evals = json.loads(Path("evals.json").read_text(encoding="utf-8"))
+evals = json.loads(
+    Path(__file__).with_name("evals.json").read_text(encoding="utf-8")
+)
 ks = (1, 3, 5, 10)
 hits = {k: 0 for k in ks}
 n = 0

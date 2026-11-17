@@ -4,8 +4,8 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-from agent import CITATION, LANGUAGE_MODEL, call_model, run_agent
-from rag import run_rag
+from src.agent import CITATION, LANGUAGE_MODEL, call_model, run_agent
+from src.rag import run_rag
 
 ABSTAIN = ("does not", "doesn't", "not specified", "no mention", "not documented",
            "not provide", "not contain", "cannot find", "can't find", "no built-in",
@@ -118,7 +118,9 @@ def main():
     parser.add_argument("--ids", nargs="*", help="only run these question ids")
     args = parser.parse_args()
 
-    evals = json.loads(Path("evals.json").read_text(encoding="utf-8"))
+    evals = json.loads(
+        Path(__file__).with_name("evals.json").read_text(encoding="utf-8")
+    )
     if args.ids:
         evals = [q for q in evals if str(q["id"]) in set(args.ids)]
 

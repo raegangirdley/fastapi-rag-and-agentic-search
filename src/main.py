@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
-from agent import answer_question
+from src.agent import answer_question
 
 app = FastAPI()
 

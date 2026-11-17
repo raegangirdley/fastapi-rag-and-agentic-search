@@ -1,4 +1,4 @@
-from eval_runner import score, summarize
+from evals.eval_runner import score, summarize
 
 
 def test_score_excludes_infrastructure_errors():

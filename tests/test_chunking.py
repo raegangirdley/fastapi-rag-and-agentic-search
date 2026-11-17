@@ -1,4 +1,4 @@
-from rag import chunk_file
+from src.rag import chunk_file
 
 def test_chunk_file_splits_on_headings_and_keeps_line_numbers(tmp_path):
     f = tmp_path / "a.md"
