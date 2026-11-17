@@ -15,7 +15,7 @@ This is a small development experiment, not a statistically rigorous benchmark.
 | Metric | Agentic search | No retrieval |
 |---|---:|---:|
 | Automatic keyword/abstention score | 6/16 (0.38) | 5/17 (0.29) |
-| Infrastructure errors | 1 | 0 |
+| Infrastructure errors | 1 timeout (Q17, 304.73 s) | 0 |
 | Grounded score | 1/14 (0.14) | 0/14 (0.00) |
 | Expected-source recall | 0.50 | 0.00 |
 | “Not in docs” phrase score | 2/2 | 0/3 |

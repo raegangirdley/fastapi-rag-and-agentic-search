@@ -46,7 +46,10 @@ for line in results_path.open(encoding="utf-8"):
                             "grade": grade,
                             "citations_ok": cites_ok == "y",
                             "note": note}) + "\n")
-
+if not grades_path.exists():
+    print("No gradable rows (all were infra errors or skipped)")
+    sys.exit(0)
+    
 grades = [json.loads(l) for l in grades_path.open(encoding="utf-8")]
 print("\nGrades:", dict(Counter(g["grade"] for g in grades)))
 print(f"Citations supported: "

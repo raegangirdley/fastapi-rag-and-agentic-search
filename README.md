@@ -135,14 +135,14 @@ The revised 17-question agent run and no-retrieval baseline were run with `llama
 | Grounded score | 1/14 (0.14) | 0/14 (0.00) | Pending |
 | Expected-source recall | 0.50 | 0.00 | Pending |
 | "Not in docs" phrase score | 2/2 | 0/3 | Pending |
-| Infrastructure errors | 1 (question 17) | 0 | Pending |
+| Infrastructure errors | 1 timeout (Q17, 304.73 s) | 0 | Pending |
 | Manual answer grades (correct / partial / wrong) | 4 / 8 / 4 | 4 / 4 / 9 | Pending |
 | Manual citation support | 1/16 | 0/17* | Pending |
 | Avg. model calls per question | 4.94 | 1.00 | Pending |
 | Avg. tokens per question | 8,653 | 112 | Pending |
 | Avg. latency (s, completed answers) | 10.50 | 1.28 | Pending |
 
-The agent latency mean excludes the 304.73-second Q17 timeout, which is reported separately. The no-retrieval answers contain no citations, so its `0/17` citation-support result means no answer had supporting citations, not that any cited lines were disproven. Q6 was rewritten after the first run exposed that its wording included the answer (`--workers 4`). Questions 1–3 were used repeatedly while debugging the agent, so this is not a clean held-out evaluation. RAG has not been implemented or evaluated. See [results/summary.md](./results/summary.md) for run details.
+The Q17 timeout is reported separately and excluded from the agent's completed-answer averages. The no-retrieval answers contain no citations, so its `0/17` citation-support result means no answer had supporting citations, not that any cited lines were disproven. Q6 was rewritten after the first run exposed that its wording included the answer (`--workers 4`). Questions 1–3 were used repeatedly while debugging the agent, so this is not a clean held-out evaluation. RAG has not been implemented or evaluated. See [results/summary.md](./results/summary.md) for run details.
 
 ## What I learned
 

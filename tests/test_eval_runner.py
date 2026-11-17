@@ -40,11 +40,11 @@ def test_summary_reports_and_excludes_errors(capsys):
             "correct": None,
             "grounded": None,
             "source_recall": None,
-            "model_calls": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "latency_s": 2.0,
-            "retries": 0,
+            "model_calls": 99,
+            "prompt_tokens": 1000,
+            "completion_tokens": 1000,
+            "latency_s": 200.0,
+            "retries": 99,
             "unverified": True,
         },
     ]
@@ -52,5 +52,5 @@ def test_summary_reports_and_excludes_errors(capsys):
     summarize(rows)
 
     output = capsys.readouterr().out
-    assert "| ALL | 2 | 1 | 1 | 1.0 | 1.0 | 1.0 |" in output
-    assert "Errors are excluded from scored accuracy metrics." in output
+    assert "| ALL | 1 | 1 | 1 | 1.0 | 1.0 | 1.0 | 1.0 | 15.0 | 1.0 | 0.0 | 0 |" in output
+    assert "N counts completed rows; errors are reported separately and excluded from averages." in output

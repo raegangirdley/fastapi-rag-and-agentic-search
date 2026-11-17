@@ -78,12 +78,13 @@ def summarize(rows: list[dict]) -> None:
         groups["ALL"].append(r)
         groups[r["type"]].append(r)
 
-    print("\n| Group | N | Scored | Errors | Correct | Grounded | Source recall | Model calls | Tokens | "
+    print("\n| Group | N | Errors | Scored | Correct | Grounded | Source recall | Model calls | Tokens | "
           "Latency (s) | Retries | Unverified |")
     print("|---|---|---|---|---|---|---|---|---|---|---|---|")
     for name, rs in groups.items():
-        scored = [r for r in rs if r["correct"] is not None]
-        errors = sum(1 for r in rs if r.get("errored"))
+        completed = [r for r in rs if not r.get("errored")]
+        errors = len(rs) - len(completed)
+        scored = [r for r in completed if r["correct"] is not None]
         correct = [1.0 if r["correct"] else 0.0 
                    for r in scored]
         grounded = [
@@ -91,16 +92,16 @@ def summarize(rows: list[dict]) -> None:
             for r in scored
             if r["grounded"] is not None
         ]
-        print(f"| {name} | {len(rs)} | {len(scored)} | {errors} "
+        print(f"| {name} | {len(completed)} | {errors} | {len(scored)} "
               f"| {mean(correct)} | {mean(grounded)} "
-              f"| {mean([r['source_recall'] for r in scored])} "
-              f"| {mean([r['model_calls'] for r in rs])} "
-              f"| {mean([r['prompt_tokens'] + r['completion_tokens'] for r in rs])} "
-              f"| {mean([r['latency_s'] for r in rs])} "
-              f"| {mean([r['retries'] for r in rs])} "
-              f"| {sum(1 for r in rs if not r.get('errored') and r['unverified'])} |")
+              f"| {mean([r['source_recall'] for r in completed])} "
+              f"| {mean([r['model_calls'] for r in completed])} "
+              f"| {mean([r['prompt_tokens'] + r['completion_tokens'] for r in completed])} "
+              f"| {mean([r['latency_s'] for r in completed])} "
+              f"| {mean([r['retries'] for r in completed])} "
+              f"| {sum(1 for r in completed if r['unverified'])} |")
     print("\nnot_in_docs rows are auto-scored by phrase matching. Review them by hand.")
-    print("Errors are excluded from scored accuracy metrics.")
+    print("N counts completed rows; errors are reported separately and excluded from averages.")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -123,13 +124,13 @@ def main():
         try:
             result = SYSTEMS[args.system](q["question"], str(q["id"]))
         except Exception as exc:                   # one bad question shouldn't kill the run
+            errored = True
             result = {"answer": f"ERROR: {exc}", "unverified": True, "problems": [str(exc)],
                       "stopped": False,
                       "latency_s": round(time.perf_counter() - started, 2),
                       "model_calls": 0, "tool_calls": 0,
                       "duplicates": 0, "retries": 0, "prompt_tokens": 0,
                       "completion_tokens": 0}
-            errored = True
         result["errored"] = errored
         row = {"id": q["id"], "type": q["type"], "model": LANGUAGE_MODEL,
                "system": args.system, **result, **score(q, result)}
