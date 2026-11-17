@@ -27,7 +27,10 @@ Do not use prior knowledge or invent facts, examples, APIs, or libraries.
 Do not generate code; explain in layman's terms.
 Cite every corpus-supported claim as [corpus/<file.md>:<line>].
 Use only file paths and line numbers present in tool results; don't fabricate sources.
-If a claim is not supported by the corpus, say so clearly.
+If a claim is not supported by the corpus, say so clearly. Search with
+1-3 distinctive keywords (class names, function names, option names),
+never a full question.  If grep finds nothing, try different keywords or 
+call list_files. Never guess a file path; only use paths returned by tools.
 If evidence is insufficient, search and read relevant corpus files before answering.
 Keep the answer concise. Never copy file contents or line-numbered text 
 into your answer."""
@@ -95,6 +98,33 @@ def retrieved_lines(tool_texts: list[str]) -> dict[tuple[str, int], str]:
             if m and current:
                 seen[(current, int(m.group(1)))] = line[m.end():]
     return seen
+
+def best_line(claim: str, path: str, seen: dict) -> tuple[int | None, float]:
+    words = content_words(claim)
+    best, best_score = None, 0.0
+    if not words:
+        return best, best_score
+    for (p, n), text in seen.items():
+        if p != path:
+            continue
+        score = len(words & content_words(text)) / len(words)
+        if score > best_score:
+            best, best_score = n, score
+    return best, best_score
+
+
+def repair_citations(answer: str, tool_texts: list[str]) -> str:
+    seen = retrieved_lines(tool_texts)
+    out, prev = [], 0
+    for m in CITATION.finditer(answer):
+        claim = answer[prev:m.start()]
+        n, score = best_line(claim, m.group(1), seen)
+        out.append(claim)
+        out.append(f"[{m.group(1)}:{n}]" if n is not None and score >= MIN_OVERLAP
+                   else m.group(0))
+        prev = m.end()
+    out.append(answer[prev:])
+    return "".join(out)
 
 # returns list of problems w/ answer; empty means grounded
 def check_answer(answer, tool_texts, tools_used) -> list[str]:
@@ -225,6 +255,7 @@ def run_agent(question: str, question_id: str = "adhoc") -> dict:
             continue
 
         answer = message.content or ""
+        answer = repair_citations(answer, tool_texts)
         problems = check_answer(answer, tool_texts, tools_used)
         log_event({"run_id": run_id, "event": "verification", "problems": problems})
         if not problems:
