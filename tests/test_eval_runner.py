@@ -19,6 +19,22 @@ def test_score_excludes_infrastructure_errors():
     assert scored["source_recall"] is None
 
 
+def test_score_reports_zero_retrieval_recall_for_empty_retrieval():
+    question = {
+        "type": "single_file",
+        "expected_sources": ["corpus/tutorial/testing.md"],
+    }
+    result = {
+        "answer": "The answer.",
+        "retrieved_files": [],
+        "unverified": False,
+    }
+
+    scored = score(question, result)
+
+    assert scored["retrieval_recall"] == 0.0
+
+
 def test_summary_reports_and_excludes_errors(capsys):
     rows = [
         {
