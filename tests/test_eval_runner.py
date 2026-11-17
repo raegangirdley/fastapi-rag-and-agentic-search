@@ -1,0 +1,56 @@
+from eval_runner import score, summarize
+
+
+def test_score_excludes_infrastructure_errors():
+    question = {
+        "type": "single_file",
+        "expected_sources": ["corpus/tutorial/testing.md"],
+    }
+    result = {
+        "answer": "ERROR: timed out",
+        "errored": True,
+        "unverified": True,
+    }
+
+    scored = score(question, result)
+
+    assert scored["correct"] is None
+    assert scored["grounded"] is None
+    assert scored["source_recall"] is None
+
+
+def test_summary_reports_and_excludes_errors(capsys):
+    rows = [
+        {
+            "type": "single_file",
+            "errored": False,
+            "correct": True,
+            "grounded": True,
+            "source_recall": 1.0,
+            "model_calls": 1,
+            "prompt_tokens": 10,
+            "completion_tokens": 5,
+            "latency_s": 1.0,
+            "retries": 0,
+            "unverified": False,
+        },
+        {
+            "type": "single_file",
+            "errored": True,
+            "correct": None,
+            "grounded": None,
+            "source_recall": None,
+            "model_calls": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "latency_s": 2.0,
+            "retries": 0,
+            "unverified": True,
+        },
+    ]
+
+    summarize(rows)
+
+    output = capsys.readouterr().out
+    assert "| ALL | 2 | 1 | 1 | 1.0 | 1.0 | 1.0 |" in output
+    assert "Errors are excluded from scored accuracy metrics." in output

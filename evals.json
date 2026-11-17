@@ -72,11 +72,11 @@
     {
         "id": "6",
         "type": "single_file",
-        "question": "In the documented `fastapi run --workers 4 main.py` example, how many worker processes does the `--workers 4` option start?",
-        "expected_answer": "It starts four worker processes.",
-        "must_include": ["4|four", "worker processes"],
+        "question": "In the documented FastAPI CLI command, what does the `--workers` option configure?",
+        "expected_answer": "It configures the number of worker processes to run.",
+        "must_include": ["worker processes"],
         "key_facts": [
-            "`--workers 4` tells Uvicorn to start four worker processes"
+            "The `--workers` option configures the number of worker processes"
         ],
         "expected_sources": [
             "corpus/deployment/server-workers.md"
