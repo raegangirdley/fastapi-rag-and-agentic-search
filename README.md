@@ -8,7 +8,7 @@
 A small, fully local ($0) experiment comparing **agentic search**, **RAG**, and a **no-retrieval control** on questions about the FastAPI docs, with a hand-graded evaluation, citation verification, and audit logging.
 
 > [!NOTE]
-> **In this setup, RAG clearly beat agentic search.** On 14 answerable questions, RAG was fully correct on 11 (3 partial, 0 wrong), versus 2 for agentic search and 4 for no retrieval.
+> **In this setup, RAG outperformed agentic search.** On 14 answerable questions, RAG was fully correct on 11 (3 partial, 0 wrong), versus 2 for agentic search and 4 for no retrieval.
 
 ![Answer quality and citation support](docs/images/results-quality.png)
 
@@ -180,7 +180,7 @@ python -m uvicorn src.main:app --reload
 ```
 
 Send a JSON `POST` request with a `question` field to `http://127.0.0.1:8000/ask`.
-The HTTP endpoint currently uses agentic search; RAG is available through the evaluation runner.
+The HTTP endpoint still uses agentic search for historical reasons; RAG is available through the evaluation runner.
 
 Build the RAG index once, check retrieval, then run and grade RAG:
 
@@ -207,10 +207,10 @@ Pass `evals.grade` the exact results path printed by the runner. It records an a
 ## Tests
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q
+pytest -q
 ```
 
-Run tests with the project interpreter so a globally installed `pytest.exe` is not used by mistake. Tests cover safe file access, path traversal, search behavior and result caps, chunking and line numbers, evaluator handling of infrastructure errors, and rescoring.
+Pytest is configured to add the repository root to the import path and collect tests from `tests/`. Tests cover safe file access, path traversal, search behavior and result caps, chunking and line numbers, evaluator handling of infrastructure errors, and rescoring.
 
 ## Evaluation
 
@@ -273,7 +273,7 @@ Q3 was manually correct although the automatic exact-phrase check marked it inco
 - The questions were written from the source docs and share some of their vocabulary and phrasing, which may make retrieval unusually easy. Retrieval performance may be lower on independently written paraphrases.
 - Questions 1–3 were used while debugging the agent and as the RAG smoke test, which may make their scores optimistic rather than held out. Q6 was rewritten after its first wording leaked the answer.
 - Some generated `corpus/reference/` pages are API stubs with little explanatory prose; `docs_src/` examples referenced by the Markdown includes are not copied into the corpus.
-- The verifier is heuristic and cannot reliably detect contradictions or wrong options, as Q2 and Q11 demonstrate.
+- The verifier is heuristic and cannot reliably detect contradictions or wrong options, as Q2 and Q11 demonstrate. It accepts a one-line offset on either side of a citation range ([`TOLERANCE = 1`](./src/agent.py)), so "verified" claims may be supported by adjacent lines rather than only the exact cited lines.
 - The primary grades come from one human reviewer. A separate AI regrade used anonymized, mixed answers, but answer style and citations can hint at the system; this is not independent-human inter-rater agreement.
 - The evaluation has only 17 questions, and latency depends on the small model and hardware listed above. Treat the results as indicative, not statistically rigorous.
 
