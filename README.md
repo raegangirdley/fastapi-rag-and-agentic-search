@@ -1,7 +1,29 @@
 # FastAPI Docs Q&A: Agentic Search vs. RAG
 
-## Quickstart (PowerShell)
+![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Ollama](https://img.shields.io/badge/LLM-Ollama%20llama3.1%3A8b-black)
+![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC)
+![License](https://img.shields.io/badge/license-MIT-green)
 
+A small, fully local ($0) experiment comparing **agentic search**, **RAG**, and a **no-retrieval control** on questions about the FastAPI docs, with a hand-graded evaluation, citation verification, and audit logging.
+
+> [!NOTE]
+> **In this setup, RAG clearly beat agentic search.** On 14 answerable questions, RAG was fully correct on 11 (3 partial, 0 wrong), versus 2 for agentic search and 4 for no retrieval.
+
+![Answer quality and citation support](docs/images/results-quality.png)
+
+![Cost and latency](docs/images/results.png)
+
+**Contents**
+- [Quickstart](#quickstart-powershell)
+- [How it works](#how-it-works)
+- [Findings](#key-findings)
+- [Setup](#setup)
+- [Usage](#usage)
+- [Evaluation](#evaluation)
+- [Limitations](#limitations)
+
+## Quickstart (PowerShell)
 From the repository root, with the Python 3.12 virtual environment from [Setup](#setup) activated:
 
 ```powershell
@@ -10,9 +32,18 @@ ollama pull llama3.1:8b; ollama pull nomic-embed-text
 python -m uvicorn src.main:app --reload
 ```
 
-## Key findings (so far)
+## Key findings
 
-The comparison uses `llama3.1:8b` (Q4_K_M) through Ollama, 17 hand-written questions over 158 FastAPI Markdown files, one human reviewer, and a separate anonymized AI regrade.
+- **RAG won on answer quality:** 11 correct / 3 partial / 0 wrong on answerable questions, and 12/14 answers had citations that supported the claims.
+- **Agentic search struggled with this model and search tool:** 0/4 on exact-term questions, usually because keyword searches built from the question missed pages that use different words.
+- **RAG was also cheaper:** about 3,800 tokens per question versus about 8,650 for the agent.
+- **Citations need checking, not just asking.** Forcing a citation on every claim produced unrelated citations when the right answer was "the docs don't say."
+
+> [!WARNING]
+> This is a small development evaluation, not a held-out benchmark: it has 17 questions and one human reviewer, and the questions share vocabulary with the source docs. Questions 1–3 were also used during agent debugging and as the RAG smoke test. See [limitations](#limitations).
+
+<details>
+<summary><b>All detailed findings</b></summary>
 
 - **Answerable questions (manual correct / partial / wrong; 14 each):** agentic search scored 2 / 8 / 4, no retrieval 4 / 4 / 6, and RAG 11 / 3 / 0.
 - **Not in docs:** RAG abstained correctly on 3/3 questions; agentic search did so on 2/2 completed questions (Q17 timed out); no retrieval did so on 0/3.
@@ -26,34 +57,81 @@ The comparison uses `llama3.1:8b` (Q4_K_M) through Ollama, 17 hand-written quest
 - **RAG answer gaps:** Three multi-file answers were partial: Q7 used `/token` instead of the documented relative `token` URL, Q8 omitted `@pytest.mark.anyio`, `async def`, and the TestClient limitation for async tests, and Q9 omitted that waiting does not occupy a worker thread.
 - **Verifier limits:** Eight RAG answers were marked unverified. The heuristic also misses citation sentence-boundary cases and cannot establish that an undocumented feature does not exist.
 
-**Headline:** On 14 answerable questions, RAG was fully correct on 11 (3 partial, 0 wrong), versus 2 fully correct for agentic search and 4 for no retrieval. RAG also abstained correctly on all three not-in-docs questions. This is a development evaluation, not a held-out benchmark: questions 1–3 were used during agent debugging and as the RAG smoke test, and the questions share vocabulary with the source docs. Detailed results and grading criteria are in [results/summary.md](./results/summary.md).
-
-This project keeps both answer systems available. **Agentic search** uses an LLM with `list_files`, `grep`, and `read_file` tools; **RAG** chunks and embeds the docs, retrieves relevant passages, and answers from them. The evaluation runner supports `agent`, `rag`, and a `no_retrieval` control. The HTTP `/ask` endpoint currently uses agentic search; RAG remains available through the evaluation runner.
-
-> **Status:** work in progress. The current focus is evaluating and improving RAG while retaining agentic search as a supported approach.
+</details>
 
 ## Why this project
 
 RAG is often cheaper per query. I expected agentic search might do better on exact-term and multi-file questions because it can inspect files and search iteratively. This project tests that hypothesis on a real documentation set instead of assuming it.
 
-## Architecture
+## How it works
 
+### System overview
+
+```mermaid
+flowchart TD
+    Q(["Question"]) --> A
+    Q --> R
+    Q --> N["No retrieval (control)<br/>LLM answers alone"]
+
+    subgraph A ["Agentic search"]
+        direction LR
+        A1["LLM"] <--> T["Tools: list_files, grep, read_file"]
+    end
+
+    subgraph R ["RAG"]
+        direction LR
+        R1["Embed question"] --> R2["Top 5 chunks"] --> R3["LLM"]
+    end
+
+    A --> V["Citation checks + retries"]
+    R --> V
+    N --> E
+    V --> E["Eval runner: automatic scores + manual grades"]
 ```
-            question
-               |
-        +------+------+
-        |             |
-   Agentic search              RAG
-        |             |
-   LLM <-> tools     embed -> retrieve top chunks
- (list_files, grep,        |
-    read_file)         LLM answers
-        |             |
-        +------+------+
-               |
-     cited answer + audit log
-               |
-        evaluation script
+
+### Agent loop
+
+```mermaid
+sequenceDiagram
+    participant Q as Question
+    participant L as LLM (llama3.1:8b)
+    participant T as Tools (read-only, corpus only)
+    participant V as Verifier
+
+    Q->>L: question + tool schemas
+    loop up to 20 steps
+        L->>T: grep / list_files / read_file
+        T-->>L: numbered lines
+    end
+    L->>V: draft answer with citations
+    alt checks pass
+        V-->>Q: answer
+    else checks fail (up to 2 retries)
+        V->>L: reasons + ask for a fix
+        L->>V: revised answer
+        V-->>Q: answer, flagged if still unverified
+    end
+```
+
+### RAG pipeline
+
+```mermaid
+flowchart LR
+    subgraph Index ["Build once"]
+        direction LR
+        D["158 Markdown files"] --> C["Chunk by heading and size<br/>(keep line numbers)"]
+        C --> E["Embed with nomic-embed-text"]
+        E --> I[("index/<br/>2,449 vectors")]
+    end
+
+    subgraph Query ["Per question"]
+        direction LR
+        Q["Question"] --> QE["Embed query"] --> S["Cosine top 5"]
+        S --> P["Prompt with numbered excerpts"] --> L["llama3.1:8b"]
+        L --> V["Verify citations<br/>(max 2 retries)"] --> A["Cited answer"]
+    end
+
+    I -.-> S
 ```
 
 The no-retrieval system is an evaluation control, not a replacement for either retrieval approach.
@@ -151,6 +229,9 @@ Each run writes raw per-question JSONL results locally; those files are git-igno
 
 The 17-question evaluations use `llama3.1:8b`. Question 6 asks what `--workers` configures without including the answer in the question. Automatic scores use the runner's substring and abstention heuristics; manual grades are separate reviewer judgments.
 
+<details>
+<summary>Show the full evaluation results table</summary>
+
 | Metric | Agentic search | No retrieval control | RAG |
 |---|---|---|---|
 | Automatic score (substring/abstention heuristic) | 6/16 (0.38) | 5/17 (0.29) | 14/17 (0.82) |
@@ -172,6 +253,8 @@ The 17-question evaluations use `llama3.1:8b`. Question 6 asks what `--workers` 
 | Avg. model calls per question | 4.94 | 1.00 | 2.65 |
 | Avg. tokens per question | 8,653 | 112 | 3,806 |
 | Avg. latency (s, completed answers) | 10.50 | 1.28 | 5.86 |
+
+</details>
 
 RAG indexed 2,449 chunks from 158 Markdown files using `nomic-embed-text`. Its retrieved expected-source recall was 1.00 over the 14 corpus-answer questions. The separate top-1 hit rate counts a question as a hit when any expected file is retrieved; it does not mean every expected file was in rank one. RAG latency was measured with the index already built and excludes the one-time index build. RAG had no infrastructure errors. The agent's Q17 timeout is reported separately and excluded from its completed-answer averages. The no-retrieval answers contain no citations, so its `0/17` citation-support result means no answer had supporting citations, not that any cited lines were disproven.
 
@@ -198,4 +281,4 @@ Q3 was manually correct although the automatic exact-phrase check marked it inco
 
 - Expose agentic search and RAG as selectable modes through the HTTP API while keeping both available.
 - Improve answer completeness and citation support, then evaluate on 6–8 questions written in my own words without consulting the docs; freeze that set before running either system and report it separately as held out.
-- Run the same evaluation with Qwen3 8B.
+- Run the same evaluation with other models like Qwen3 8B.
