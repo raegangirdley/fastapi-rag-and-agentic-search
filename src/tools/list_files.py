@@ -1,7 +1,7 @@
 import os
 
 from pathlib import Path
-from tools.safe_path import safe_path
+from src.tools.safe_path import safe_path
 
 def list_files(folder: str = "corpus") -> list[str]:
     """List the markdown files under a folder."""

@@ -5,7 +5,9 @@ REQUIRED = {"id", "type", "question", "expected_answer", "key_facts",
             "expected_sources"}
 TYPES = {"single_file", "multi_file", "exact_term", "not_in_docs"}
 
-evals = json.loads(Path("evals.json").read_text(encoding="utf-8"))
+evals = json.loads(
+    Path(__file__).with_name("evals.json").read_text(encoding="utf-8")
+)
 seen_ids = set()
 errors = 0
 
