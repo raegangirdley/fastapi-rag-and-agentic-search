@@ -5,7 +5,7 @@
 From the repository root, with the Python 3.12 virtual environment from [Setup](#setup) activated:
 
 ```powershell
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ollama pull llama3.1:8b; ollama pull nomic-embed-text
 python -m uvicorn main:app --reload
 ```
@@ -82,12 +82,12 @@ Requirements: Python 3.12, [Ollama](https://ollama.com)
 Evaluation hardware: Intel Core i7-13700H (14 cores, 20 logical processors), 31.7 GiB RAM, NVIDIA GeForce RTX 4070 Laptop GPU (8,188 MiB). The evaluation model was `llama3.1:8b` with Q4_K_M quantization.
 The tested environment used Ollama 0.40.16, `llama3.1:8b` (model ID prefix `46e0c10c039e`, Q4_K_M), and `nomic-embed-text:latest` (ID prefix `0a109f422b47`, F16). Python package versions are pinned in `requirements.txt`.
 
-```bash
+```powershell
 git clone https://github.com/raegangirdley/fastapi-rag-and-agentic-search.git
 cd fastapi-rag-and-agentic-search
 python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 
 ollama pull llama3.1:8b
 ollama pull nomic-embed-text
@@ -128,11 +128,11 @@ Pass `grade.py` the exact results path printed by the runner. It records an answ
 
 ## Tests
 
-```bash
-python -m pytest
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Tests cover safe file access, path traversal, search behavior and result caps, chunking and line numbers, and evaluator handling of infrastructure errors.
+Run tests with the project interpreter so a globally installed `pytest.exe` is not used by mistake. Tests cover safe file access, path traversal, search behavior and result caps, chunking and line numbers, and evaluator handling of infrastructure errors.
 
 ## Evaluation
 
