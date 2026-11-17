@@ -1,11 +1,14 @@
-from pathlib import Path
 import json
 import ollama
 import re
+import time
+import uuid
 
+from pathlib import Path
 from tools.grep import grep
 from tools.list_files import list_files
 from tools.read_file import read_file
+from audit import log_event
 
 tools_path = Path(__file__).resolve().parent / "tools" / "tools.json"
 with tools_path.open(encoding="utf-8") as file:
@@ -35,6 +38,8 @@ MAX_DUPLICATES = 2
 TOLERANCE = 1
 MIN_OVERLAP = 0.3
 
+CLIENT = ollama.Client(timeout=300)
+
 CITATION = re.compile(r"\[(corpus/[^\]:]+\.md):(\d+)(?:-(\d+))?\]")
 GREP_LINE = re.compile(r"^(corpus/\S+?\.md):(\d+): ")
 NUM_LINE = re.compile(r"^(\d+): ")
@@ -61,7 +66,7 @@ def run_tool(tool_call) -> str:
         return f"Tool error ({type(exc).__name__}): {exc}"
 
 def call_model(messages, use_tools=True):
-    return ollama.chat(
+    return CLIENT.chat(
         model=LANGUAGE_MODEL,
         messages=messages,
         tools=tool_schemas if use_tools else None,
@@ -135,10 +140,15 @@ def check_answer(answer, tool_texts, tools_used) -> list[str]:
     for sent in re.split(r"(?<=[.!?])\s+", answer.strip()):
         if len(sent.split()) > 6 and not CITATION.search(sent):
             problems.append(f"sentence has no citation: {sent[:50]}")
-            
+
     return problems
 
-def answer_question(question: str) -> str:
+def run_agent(question: str, question_id: str = "adhoc") -> dict:
+    run_id = f"{question_id}-{uuid.uuid4().hex[:6]}"
+    start = time.perf_counter()
+    m = {"model_calls": 0, "tool_calls": 0, "duplicates": 0, "retries": 0,
+         "prompt_tokens": 0, "completion_tokens": 0}
+
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": question},
@@ -146,12 +156,39 @@ def answer_question(question: str) -> str:
     tool_texts: list[str] = []
     tools_used: set[str] = set()
     seen_calls: set[str] = set()
-    duplicates = 0
-    retries = 0
     force_final = False
 
+    def timed_call(use_tools: bool):
+        t = time.perf_counter()
+        response = call_model(messages, use_tools)
+        latency = time.perf_counter() - t
+        pt = getattr(response, "prompt_eval_count", None) or 0
+        ct = getattr(response, "eval_count", None) or 0
+        m["model_calls"] += 1
+        m["prompt_tokens"] += pt
+        m["completion_tokens"] += ct
+        log_event({"run_id": run_id, "event": "model_call",
+                   "latency_s": round(latency, 2),
+                   "prompt_tokens": pt, "completion_tokens": ct})
+        return response["message"]
+
+    def finish(answer: str, problems=None, stopped=False) -> dict:
+        problems = problems or []
+        result = {
+            "run_id": run_id,
+            "answer": answer,
+            "unverified": bool(problems) and not stopped,
+            "problems": problems,
+            "stopped": stopped,
+            "latency_s": round(time.perf_counter() - start, 2),
+            **m,
+        }
+        log_event({"run_id": run_id, "event": "final",
+                   **{k: v for k, v in result.items() if k != "answer"}})
+        return result
+
     for step in range(MAX_STEPS):
-        message = call_model(messages, use_tools=not force_final)["message"]
+        message = timed_call(use_tools=not force_final)
 
         if message.tool_calls and not force_final:
             messages.append(message)
@@ -159,18 +196,28 @@ def answer_question(question: str) -> str:
                 name = tool_call.function.name
                 args = tool_call.function.arguments
                 key = f"{name}:{json.dumps(args, sort_keys=True)}"
-                if key in seen_calls:
-                    duplicates += 1
-                    result = "You already ran this exact call. Use the earlier result."
-                else:
-                    seen_calls.add(key)
-                    result = run_tool(tool_call)
-                    tool_texts.append(result)
-                    tools_used.add(name)
-                print(f"[step {step + 1}] TOOL: {name} {args}")
-                messages.append({"role": "tool", "name": name, "content": result})
+                t = time.perf_counter()
 
-            if duplicates >= MAX_DUPLICATES and "read_file" in tools_used:
+                if key in seen_calls:
+                    m["duplicates"] += 1
+                    duplicate = True
+                    result_text = "You already ran this exact call. Use the earlier result."
+                else:
+                    duplicate = False
+                    seen_calls.add(key)
+                    result_text = run_tool(tool_call)
+                    tool_texts.append(result_text)
+                    tools_used.add(name)
+
+                m["tool_calls"] += 1
+                log_event({"run_id": run_id, "event": "tool_call", "step": step + 1,
+                           "tool": name, "arguments": args, "duplicate": duplicate,
+                           "error": result_text.startswith(("Tool error", "Unknown tool")),
+                           "result_chars": len(result_text),
+                           "latency_s": round(time.perf_counter() - t, 3)})
+                messages.append({"role": "tool", "name": name, "content": result_text})
+
+            if m["duplicates"] >= MAX_DUPLICATES and "read_file" in tools_used:
                 force_final = True
                 messages.append({"role": "user", "content": (
                     "Stop searching. Write the final answer now, using only text "
@@ -179,24 +226,31 @@ def answer_question(question: str) -> str:
 
         answer = message.content or ""
         problems = check_answer(answer, tool_texts, tools_used)
+        log_event({"run_id": run_id, "event": "verification", "problems": problems})
         if not problems:
-            return answer
+            return finish(answer)
 
-        if retries < MAX_RETRIES:
-            retries += 1
+        if m["retries"] < MAX_RETRIES:
+            m["retries"] += 1
             if "read_file" in tools_used:
                 force_final = True
-                step_hint = "Do not call any tools; use the text you already read."
+                hint = "Do not call any tools; use the text you already read."
             else:
-                step_hint = "Open the most relevant file with read_file first."
+                hint = "Open the most relevant file with read_file first."
             messages.append(message)
             messages.append({"role": "user", "content": (
                 "Your answer failed verification: " + "; ".join(problems) + ". "
-                + step_hint + " Write 3 to 6 sentences. Do not copy file text. "
-                "Cite each claim as [corpus/<file>.md:<line>] using the exact "
-                "line number where the claim appears.")})
+                + hint + " Write 3 to 6 sentences. Do not copy file text. Cite each "
+                "claim as [corpus/<file>.md:<line>] using the exact line number "
+                "where the claim appears.")})
             continue
 
-        return answer + "\n\n[UNVERIFIED: " + "; ".join(problems) + "]"
+        return finish(answer, problems)
 
-    return "Stopped: step limit reached without a final answer."
+    return finish("Stopped: step limit reached without a final answer.", stopped=True)
+
+def answer_question(question: str) -> str:
+    result = run_agent(question)
+    if result["unverified"]:
+        return result["answer"] + "\n\n[UNVERIFIED: " + "; ".join(result["problems"]) + "]"
+    return result["answer"]

@@ -4,6 +4,7 @@
         "type": "single_file",
         "question": "For a large uploaded file, how does UploadFile avoid keeping the entire file in memory? And what two attributes provide the original filename and media type?",
         "expected_answer": "UploadFile uses a spooled file: it stays in memory up to a size limit and then is stored on disk. The attributes are `filename` and `content_type`.",
+        "must_include": ["spooled", "filename", "content_type"],
         "key_facts": [
             "UploadFile uses a spooled file that moves from memory to disk after a size limit",
             "The original filename and media type are exposed as `filename` and `content_type`"
@@ -17,6 +18,7 @@
         "type": "single_file",
         "question": "When a path operation adds a background task with `.add_task()`, when does it run, and what kinds of arguments can `.add_task()` pass to the task function?",
         "expected_answer": "The task runs after the response is sent. `.add_task()` takes the task function, positional arguments, and keyword arguments to pass to it.",
+        "must_include": ["response is sent", "arguments", "keyword arguments"],
         "key_facts": [
             "Background tasks run after the response is sent",
             "`.add_task()` accepts the function plus positional and keyword arguments"
@@ -30,6 +32,7 @@
         "type": "single_file",
         "question": "If a path operation returns a user object containing a password but declares an output response model without a password field, what does FastAPI return?",
         "expected_answer": "FastAPI filters the returned data to the fields declared in the response model, so the password is omitted.",
+        "must_include": ["fields declared in the response model", "password"],
         "key_facts": [
             "FastAPI filters output to the response model fields",
             "Fields such as a password that are absent from the response model are omitted"
@@ -43,6 +46,7 @@
         "type": "single_file",
         "question": "In the documented float path-parameter example using `gt=0`, which of `0.5` and `0` is valid, and why?",
         "expected_answer": "`0.5` is valid because it is greater than zero; `0` is invalid because it is not greater than zero.",
+        "must_include": ["0.5", "greater than"],
         "key_facts": [
             "`gt=0` requires a value strictly greater than zero",
             "`0.5` passes while `0` fails"
@@ -56,6 +60,7 @@
         "type": "single_file",
         "question": "In the settings example that reads a `.env` file through `get_settings()`, what does `@lru_cache` prevent from happening on every request?",
         "expected_answer": "It prevents creating a new `Settings` object and rereading the `.env` file for each request; after the first call, the same object is reused.",
+        "must_include": ["@lru_cache", "Settings", ".env"],
         "key_facts": [
             "`@lru_cache` returns the previously created settings object on subsequent calls",
             "This avoids rereading the `.env` file for each request"
@@ -69,6 +74,7 @@
         "type": "single_file",
         "question": "In the documented `fastapi run --workers 4 main.py` example, how many worker processes does the `--workers 4` option start?",
         "expected_answer": "It starts four worker processes.",
+        "must_include": ["4|four", "worker processes"],
         "key_facts": [
             "`--workers 4` tells Uvicorn to start four worker processes"
         ],
@@ -81,6 +87,7 @@
         "type": "multi_file",
         "question": "In the OAuth2 password-flow example, what relative URL does `OAuth2PasswordBearer` declare for obtaining a token, and which dependency then uses the token string to provide the current user?",
         "expected_answer": "`OAuth2PasswordBearer` declares `tokenUrl=\"token\"`, a relative URL. The `get_current_user` dependency receives the token from `oauth2_scheme` and uses it to return a Pydantic `User` model.",
+        "must_include": ["tokenUrl=\"token\"", "get_current_user"],
         "key_facts": [
             "`tokenUrl=\"token\"` is the declared relative token URL",
             "`oauth2_scheme` provides the token string to `get_current_user`",
@@ -96,6 +103,7 @@
         "type": "multi_file",
         "question": "For ordinary synchronous pytest tests, how does the tutorial send requests to a FastAPI app, and what changes when the test must also await asynchronous database functions?",
         "expected_answer": "For synchronous tests, use `TestClient` from normal `def` test functions with ordinary client calls. For tests that await async functions, mark an `async def` test with `@pytest.mark.anyio` and use HTTPX `AsyncClient` with awaited requests; `TestClient` does not work inside those async test functions.",
+        "must_include": ["TestClient", "pytest.mark.anyio", "AsyncClient"],
         "key_facts": [
             "Synchronous tests use `TestClient` in normal `def` functions",
             "Async tests use `@pytest.mark.anyio`, `async def`, and HTTPX `AsyncClient`",
@@ -111,6 +119,7 @@
         "type": "multi_file",
         "question": "The SQL database tutorial creates one session per request using a `yield` dependency. If that dependency is declared with `Depends(get_session, max_concurrency=5)`, how many sessions can be open through it at once, and what happens to another request needing one?",
         "expected_answer": "Up to five requests can have a session open through that dependency at once. Another request waits until a session is available, without occupying a worker thread while waiting.",
+        "must_include": ["five requests", "wait", "worker thread"],
         "key_facts": [
             "The SQL tutorial's `yield` dependency provides one session per request",
             "`max_concurrency=5` allows up to five concurrent dependency uses",
@@ -126,6 +135,7 @@
         "type": "multi_file",
         "question": "When deploying with the FastAPI CLI, what address does `fastapi run` listen on by default, and what component does the HTTPS guide describe as receiving encrypted requests and forwarding decrypted HTTP to the app?",
         "expected_answer": "`fastapi run` listens on `0.0.0.0` by default. The HTTPS guide describes a TLS termination proxy as receiving encrypted HTTPS requests and forwarding decrypted HTTP requests to the application.",
+        "must_include": ["0.0.0.0", "TLS termination proxy"],
         "key_facts": [
             "`fastapi run` listens on `0.0.0.0` by default",
             "A TLS termination proxy handles the HTTPS connection and forwards decrypted HTTP to the app"
@@ -140,6 +150,7 @@
         "type": "exact_term",
         "question": "What exact response-model option omits fields whose values came only from model defaults, while retaining values explicitly set in the returned data?",
         "expected_answer": "Use `response_model_exclude_unset=True`.",
+        "must_include": ["response_model_exclude_unset=True"],
         "key_facts": [
             "The exact option is `response_model_exclude_unset=True`",
             "It omits values not explicitly set"
@@ -153,6 +164,7 @@
         "type": "exact_term",
         "question": "What exact environment-variable name does `fastapi dev` set to `development` before importing the app, unless it is already set?",
         "expected_answer": "`FASTAPI_ENV`.",
+        "must_include": ["FASTAPI_ENV"],
         "key_facts": [
             "The environment variable is named `FASTAPI_ENV`",
             "`fastapi dev` preserves an existing value instead of replacing it"
@@ -166,6 +178,7 @@
         "type": "exact_term",
         "question": "In the Pydantic Settings dotenv example, what exact `model_config` key names the `.env` file to read?",
         "expected_answer": "The key is `env_file`.",
+        "must_include": ["env_file"],
         "key_facts": [
             "The dotenv filename is configured with `env_file` in `model_config`"
         ],
@@ -178,6 +191,7 @@
         "type": "exact_term",
         "question": "What exact `Query` argument in the documented optional `q` example limits its value to at most 50 characters?",
         "expected_answer": "`max_length=50`.",
+        "must_include": ["max_length=50"],
         "key_facts": [
             "The exact argument is `max_length=50`",
             "The query parameter remains optional because its default is `None`"
